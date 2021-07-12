@@ -243,13 +243,22 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		}
 		b.services[container.ID] = append(b.services[container.ID], service)
 		log.Println("added:", container.ID[:12], service.ID)
+		//		log.Println(Hostname)#
+		//		log.Println(container.ID)
+		//		log.Println(service)
+		getstatus := b.registry.GetStatus(service)
+		if getstatus != nil {
+			log.Println("getstatus failed:", service, err)
+			continue
+		}
+		log.Println("getstatus", getstatus)
 	}
 }
 
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
-
+	Nodename := Hostname
 	// not sure about this logic. kind of want to remove it.
 	hostname := Hostname
 	if hostname == "" {
@@ -285,6 +294,8 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	service.Origin = port
 	service.ID = hostname + ":" + container.Name[1:] + ":" + port.ExposedPort
 	service.Name = serviceName
+	service.Nodename = Nodename
+	service.ContainerID = container.ID
 	if isgroup && !metadataFromPort["name"] {
 		service.Name += "-" + port.ExposedPort
 	}

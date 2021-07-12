@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gliderlabs/registrator/bridge"
+	"github.com/gliderlabs/registrator/influxdb"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-cleanhttp"
 )
@@ -38,8 +39,8 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		tlsConfigDesc := &consulapi.TLSConfig{
 			Address:            uri.Host,
 			CAFile:             os.Getenv("CONSUL_CACERT"),
-			CertFile:           os.Getenv("CONSUL_CLIENT_CERT"),
-			KeyFile:            os.Getenv("CONSUL_CLIENT_KEY"),
+			CertFile:           os.Getenv("CONSUL_TLSCERT"),
+			KeyFile:            os.Getenv("CONSUL_TLSKEY"),
 			InsecureSkipVerify: false,
 		}
 		tlsConfig, err := consulapi.SetupTLSConfig(tlsConfigDesc)
@@ -49,7 +50,7 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		config.Scheme = "https"
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig
-		config.Transport = transport
+		config.HttpClient.Transport = transport
 		config.Address = uri.Host
 	} else if uri.Host != "" {
 		config.Address = uri.Host
@@ -89,6 +90,40 @@ func (r *ConsulAdapter) Register(service *bridge.Service) error {
 	return r.client.Agent().ServiceRegister(registration)
 }
 
+func (r *ConsulAdapter) GetStatus(service *bridge.Service) error {
+
+	registration := new(consulapi.AgentServiceRegistration)
+	var serviceStatus string
+
+	registration.ID = service.ID
+	registration.Name = service.Name
+	registration.Port = service.Port
+	registration.Tags = service.Tags
+	registration.Address = service.IP
+	registration.Check = r.buildCheck(service)
+	registration.Meta = service.Attrs
+
+	log.Println("service.ID: ", service.ID)
+	log.Println("service.Name: ", service.Name)
+	log.Println("service.Port: ", service.Port)
+	log.Println("Service.ContainerID: ", service.ContainerID)
+	log.Println("Tags: ", service.Tags)
+	log.Println("service.IP: ", service.IP)
+	log.Println("service.Nodename: ", service.Nodename)
+	log.Println("service.IP: ", string(service.IP))
+	ServiceHealthCheck, _, _ := r.client.Health().Checks(service.Name, nil)
+
+	for _, v := range ServiceHealthCheck {
+
+		//log.Println("Status:", v.Status)
+		serviceStatus := v.Status
+		_ = serviceStatus
+	}
+	log.Println("Status:", serviceStatus)
+	influxdb.WriteData(service.Name, service.ContainerID, service.Nodename, service.Port, service.IP, serviceStatus, service.Tags)
+	return r.client.Agent().ServiceRegister(registration)
+}
+
 func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServiceCheck {
 	check := new(consulapi.AgentServiceCheck)
 	if status := service.Attrs["check_initial_status"]; status != "" {
@@ -99,21 +134,15 @@ func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServ
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
-		if method := service.Attrs["check_http_method"]; method != "" {
-			check.Method = method
-		}
 	} else if path := service.Attrs["check_https"]; path != "" {
 		check.HTTP = fmt.Sprintf("https://%s:%d%s", service.IP, service.Port, path)
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
-		if method := service.Attrs["check_https_method"]; method != "" {
-			check.Method = method
-		}
 	} else if cmd := service.Attrs["check_cmd"]; cmd != "" {
-		check.Args = []string{"check-cmd", service.Origin.ContainerID[:12], service.Origin.ExposedPort, cmd}
+		check.Script = fmt.Sprintf("check-cmd %s %s %s", service.Origin.ContainerID[:12], service.Origin.ExposedPort, cmd)
 	} else if script := service.Attrs["check_script"]; script != "" {
-		check.Args = []string{r.interpolateService(script, service)}
+		check.Script = r.interpolateService(script, service)
 	} else if ttl := service.Attrs["check_ttl"]; ttl != "" {
 		check.TTL = ttl
 	} else if tcp := service.Attrs["check_tcp"]; tcp != "" {
@@ -121,21 +150,10 @@ func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServ
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
-	} else if grpc := service.Attrs["check_grpc"]; grpc != "" {
-		check.GRPC = fmt.Sprintf("%s:%d", service.IP, service.Port)
-		if timeout := service.Attrs["check_timeout"]; timeout != "" {
-			check.Timeout = timeout
-		}
-		if useTLS := service.Attrs["check_grpc_use_tls"]; useTLS != "" {
-			check.GRPCUseTLS = true
-			if tlsSkipVerify := service.Attrs["check_tls_skip_verify"]; tlsSkipVerify != "" {
-				check.TLSSkipVerify = true
-			}
-		}
 	} else {
 		return nil
 	}
-	if len(check.Args) != 0 || check.HTTP != "" || check.TCP != "" || check.GRPC != "" {
+	if check.Script != "" || check.HTTP != "" || check.TCP != "" {
 		if interval := service.Attrs["check_interval"]; interval != "" {
 			check.Interval = interval
 		} else {
