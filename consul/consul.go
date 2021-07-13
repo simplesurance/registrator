@@ -90,18 +90,23 @@ func (r *ConsulAdapter) Register(service *bridge.Service) error {
 	return r.client.Agent().ServiceRegister(registration)
 }
 
+func contains(s []string, str string) string {
+	for _, v := range s {
+		if v == str {
+			return "critical"
+		}
+	}
+
+	return "passing"
+}
+
 func (r *ConsulAdapter) GetStatus(service *bridge.Service) error {
 
 	registration := new(consulapi.AgentServiceRegistration)
-	var serviceStatus string
+	var serviceStatus []string
+	var status string
 
 	registration.ID = service.ID
-	registration.Name = service.Name
-	registration.Port = service.Port
-	registration.Tags = service.Tags
-	registration.Address = service.IP
-	registration.Check = r.buildCheck(service)
-	registration.Meta = service.Attrs
 
 	log.Println("service.ID: ", service.ID)
 	log.Println("service.Name: ", service.Name)
@@ -113,14 +118,20 @@ func (r *ConsulAdapter) GetStatus(service *bridge.Service) error {
 	log.Println("service.IP: ", string(service.IP))
 	ServiceHealthCheck, _, _ := r.client.Health().Checks(service.Name, nil)
 
-	for _, v := range ServiceHealthCheck {
+	for k, v := range ServiceHealthCheck {
 
 		//log.Println("Status:", v.Status)
-		serviceStatus := v.Status
+		serviceStatus = append(serviceStatus, v.Status)
+
+		log.Println("k:", k, "v:", v)
+		log.Println("serviceStatus:", serviceStatus)
+		//log.Println("###serviceStatus: ", serviceStatus)
+		//log.Println(v)
 		_ = serviceStatus
 	}
-	log.Println("Status:", serviceStatus)
-	influxdb.WriteData(service.Name, service.ContainerID, service.Nodename, service.Port, service.IP, serviceStatus, service.Tags)
+
+	status = contains(serviceStatus, "critical")
+	influxdb.WriteData(service.Name, service.ContainerID, service.Nodename, service.Port, service.IP, status, service.Tags)
 	return r.client.Agent().ServiceRegister(registration)
 }
 
