@@ -79,6 +79,7 @@ func (r *ConsulAdapter) Ping() error {
 }
 
 func (r *ConsulAdapter) Register(service *bridge.Service) error {
+
 	registration := new(consulapi.AgentServiceRegistration)
 	registration.ID = service.ID
 	registration.Name = service.Name
@@ -90,9 +91,9 @@ func (r *ConsulAdapter) Register(service *bridge.Service) error {
 	return r.client.Agent().ServiceRegister(registration)
 }
 
-func contains(s []string, str string) string {
+func contains(s []string) string {
 	for _, v := range s {
-		if v == str {
+		if v == "critical" {
 			return "critical"
 		}
 	}
@@ -103,35 +104,47 @@ func contains(s []string, str string) string {
 func (r *ConsulAdapter) GetStatus(service *bridge.Service) error {
 
 	registration := new(consulapi.AgentServiceRegistration)
+	registration.ID = service.ID
+	registration.Name = service.Name
+	registration.Port = service.Port
+	registration.Tags = service.Tags
+	registration.Address = service.IP
+	registration.Check = r.buildCheck(service)
+	registration.Meta = service.Attrs
 	var serviceStatus []string
 	var status string
-
-	registration.ID = service.ID
-
-	log.Println("service.ID: ", service.ID)
-	log.Println("service.Name: ", service.Name)
-	log.Println("service.Port: ", service.Port)
-	log.Println("Service.ContainerID: ", service.ContainerID)
-	log.Println("Tags: ", service.Tags)
-	log.Println("service.IP: ", service.IP)
-	log.Println("service.Nodename: ", service.Nodename)
-	log.Println("service.IP: ", string(service.IP))
+	/*
+	log.Println("service.ID: ", service.ID, "service.Name: ",
+		service.Name, "service.Port: ", service.Port, "Service.ContainerID: ",
+		service.ContainerID, "Tags: ", service.Tags, "service.IP: ", service.IP, "service.Nodename: ", service.Nodename)
+	*/
 	ServiceHealthCheck, _, _ := r.client.Health().Checks(service.Name, nil)
 
-	for k, v := range ServiceHealthCheck {
+	for _, v := range ServiceHealthCheck {
 
-		//log.Println("Status:", v.Status)
 		serviceStatus = append(serviceStatus, v.Status)
-
-		log.Println("k:", k, "v:", v)
-		log.Println("serviceStatus:", serviceStatus)
-		//log.Println("###serviceStatus: ", serviceStatus)
-		//log.Println(v)
+		//log.Println("serviceStatus:", serviceStatus)
 		_ = serviceStatus
 	}
 
-	status = contains(serviceStatus, "critical")
-	influxdb.WriteData(service.Name, service.ContainerID, service.Nodename, service.Port, service.IP, status, service.Tags)
+	status = contains(serviceStatus)
+	log.Println("Writing to Influxdb for ", service.Name)
+
+	// update variables for influxdb
+	metrics := &influxdb.Metrics{
+		ServiceName:   service.Name,
+		ContainerID:   service.ContainerID[:12],
+		HostName:      service.Nodename,
+		ServicePort:   service.Port,
+		ServiceIP:     service.IP,
+		ServiceStatus: status,
+		ServiceTags:   service.Tags,
+	}
+
+	influx := influxdb.New()
+
+	influx.WriteData(metrics)
+
 	return r.client.Agent().ServiceRegister(registration)
 }
 
@@ -145,15 +158,21 @@ func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServ
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
+		if method := service.Attrs["check_http_method"]; method != "" {
+			check.Method = method
+		}
 	} else if path := service.Attrs["check_https"]; path != "" {
 		check.HTTP = fmt.Sprintf("https://%s:%d%s", service.IP, service.Port, path)
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
+		if method := service.Attrs["check_https_method"]; method != "" {
+			check.Method = method
+		}
 	} else if cmd := service.Attrs["check_cmd"]; cmd != "" {
-		check.Script = fmt.Sprintf("check-cmd %s %s %s", service.Origin.ContainerID[:12], service.Origin.ExposedPort, cmd)
+		check.Args = []string{"check-cmd", service.Origin.ContainerID[:12], service.Origin.ExposedPort, cmd}
 	} else if script := service.Attrs["check_script"]; script != "" {
-		check.Script = r.interpolateService(script, service)
+		check.Args = []string{r.interpolateService(script, service)}
 	} else if ttl := service.Attrs["check_ttl"]; ttl != "" {
 		check.TTL = ttl
 	} else if tcp := service.Attrs["check_tcp"]; tcp != "" {
@@ -161,10 +180,21 @@ func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServ
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
 			check.Timeout = timeout
 		}
+	} else if grpc := service.Attrs["check_grpc"]; grpc != "" {
+		check.GRPC = fmt.Sprintf("%s:%d", service.IP, service.Port)
+		if timeout := service.Attrs["check_timeout"]; timeout != "" {
+			check.Timeout = timeout
+		}
+		if useTLS := service.Attrs["check_grpc_use_tls"]; useTLS != "" {
+			check.GRPCUseTLS = true
+			if tlsSkipVerify := service.Attrs["check_tls_skip_verify"]; tlsSkipVerify != "" {
+				check.TLSSkipVerify = true
+			}
+		}
 	} else {
 		return nil
 	}
-	if check.Script != "" || check.HTTP != "" || check.TCP != "" {
+	if len(check.Args) != 0 || check.HTTP != "" || check.TCP != "" || check.GRPC != "" {
 		if interval := service.Attrs["check_interval"]; interval != "" {
 			check.Interval = interval
 		} else {

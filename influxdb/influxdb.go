@@ -2,42 +2,61 @@ package influxdb
 
 import (
 	"context"
+	"log"
 	"os"
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 )
 
-func WriteData(serviceName string, containerID string, hostName string, servicePort int, serviceIP string, serviceStatus string, serviceTags []string) {
+type Metrics struct {
+	ServiceName   string
+	ContainerID   string
+	HostName      string
+	ServicePort   int
+	ServiceIP     string
+	ServiceStatus string
+	ServiceTags   []string
+}
 
-	bucketName := os.Getenv("bucket")
-	influxToken := os.Getenv("influx_token")
-	orgName := os.Getenv("org_name")
-	influxURL := os.Getenv("influx_url")
-	// Create a new client using an InfluxDB server base URL and an authentication token
-	client := influxdb2.NewClient(influxURL, influxToken)
+///////////////////////
+
+type InfluxDBClient struct {
+	BucketName  string
+	InfluxToken string
+	InfluxdbURL string
+	client      influxdb2.Client
+}
+
+func New() InfluxDBClient {
+	return InfluxDBClient{
+		BucketName: os.Getenv("bucket"),
+		client:     influxdb2.NewClient(os.Getenv("influx_url"), os.Getenv("influx_token")),
+	}
+}
+
+func (c *InfluxDBClient) WriteData(metrics *Metrics) {
+
+	client := c.client
 	defer client.Close()
 	// Use blocking write client for writes to desired bucket
 
-	writeAPI := client.WriteAPIBlocking(orgName, bucketName)
+	writeAPI := client.WriteAPIBlocking("wkda", c.BucketName)
 	// write some points
 
 	p := influxdb2.NewPointWithMeasurement("stat").
-		AddTag("service_name", serviceName).
-		AddField("container_id", containerID[:12]).
-		AddField("host", hostName).
-		AddField("port", servicePort).
-		AddField("ip", serviceIP).
-		AddField("status", serviceStatus).
-		AddField("tags", serviceTags).
+		AddTag("service_name", metrics.ServiceName).
+		AddField("container_id", metrics.ContainerID).
+		AddField("host", metrics.HostName).
+		AddField("port", metrics.ServicePort).
+		AddField("ip", metrics.ServiceIP).
+		AddField("status", metrics.ServiceStatus).
+		AddField("tags", metrics.ServiceTags).
 		SetTime(time.Now())
 
 	// write synchronously
 	err := writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
-		panic(err)
+		log.Println("Error writing to influxdb. Error is: ", err)
 	}
-
-	// Ensures background processes finishes
-	client.Close()
 }
