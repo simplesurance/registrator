@@ -22,7 +22,7 @@ delayExitOnQuitSignal() {
     echo "got here ...${duration}"
     # checking the docker containers duration except filebeat and ecs-agent
     # exit when no other containers left or exit on timeout
-    running_tasks=$(docker container ls --format '{{.Image}}' | grep -v 'registrator\|restrainer\|haproxy\|filebeat\|amazon-ecs-agent\|amazon-ecs-pause')
+    running_tasks=$(docker container ls --format '{{.Image}}' | grep -v 'registrator\|restrainer\|haproxy\|filebeat')
     echo "running_tasks==>${running_tasks}"
     if [[ -z $running_tasks ]]; then
       killProcess

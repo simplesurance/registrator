@@ -19,18 +19,18 @@ type Metrics struct {
 	ServiceTags   []string
 }
 
-///////////////////////
-
 type InfluxDBClient struct {
 	BucketName  string
 	InfluxToken string
 	InfluxdbURL string
+	OrgName     string
 	client      influxdb2.Client
 }
 
 func New() InfluxDBClient {
 	return InfluxDBClient{
 		BucketName: os.Getenv("bucket"),
+		OrgName:    os.Getenv("org_name"),
 		client:     influxdb2.NewClient(os.Getenv("influx_url"), os.Getenv("influx_token")),
 	}
 }
@@ -41,7 +41,7 @@ func (c *InfluxDBClient) WriteData(metrics *Metrics) {
 	defer client.Close()
 	// Use blocking write client for writes to desired bucket
 
-	writeAPI := client.WriteAPIBlocking("wkda", c.BucketName)
+	writeAPI := client.WriteAPIBlocking(c.OrgName, c.BucketName)
 	// write some points
 
 	p := influxdb2.NewPointWithMeasurement("stat").
