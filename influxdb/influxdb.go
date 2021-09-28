@@ -17,6 +17,7 @@ type Metrics struct {
 	ServiceIP     string
 	ServiceStatus string
 	ServiceTags   []string
+	ServiceID     string
 }
 
 type InfluxDBClient struct {
@@ -46,7 +47,7 @@ func (c *InfluxDBClient) WriteData(metrics *Metrics) {
 
 	p := influxdb2.NewPointWithMeasurement("stat").
 		AddTag("service_name", metrics.ServiceName).
-		AddField("container_id", metrics.ContainerID).
+		AddTag("container_id", metrics.ContainerID).
 		AddField("host", metrics.HostName).
 		AddField("port", metrics.ServicePort).
 		AddField("ip", metrics.ServiceIP).
@@ -57,6 +58,6 @@ func (c *InfluxDBClient) WriteData(metrics *Metrics) {
 	// write synchronously
 	err := writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
-		log.Println("Error writing to influxdb. Error is: ", err)
+		log.Println("Influx: Error writing to influxdb. Error is: ", err)
 	}
 }

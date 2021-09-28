@@ -148,7 +148,7 @@ func hostNameAsTag() string {
 				hostname = hostname + "-" + v
 			}
 		}
-		return hostname
+		return "hostname=" + hostname
 	}
-	return adverthost
+	return "hostname=" + adverthost
 }
