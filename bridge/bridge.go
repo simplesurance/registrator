@@ -108,6 +108,12 @@ func (b *Bridge) Sync(quiet bool) {
 			b.add(listing.ID, quiet)
 		} else {
 			for _, service := range services {
+				//log.Println("Bridge service: ", service)
+				getstatus := b.registry.QueryConsul(service)
+				if getstatus != nil {
+					//	log.Println("getstatus failed:", service, err)
+					continue
+				}
 				err := b.registry.Register(service)
 				if err != nil {
 					log.Println("sync register failed:", service, err)
@@ -249,6 +255,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
+	Nodename := Hostname
 
 	// not sure about this logic. kind of want to remove it.
 	hostname := Hostname
@@ -285,6 +292,8 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	service.Origin = port
 	service.ID = hostname + ":" + container.Name[1:] + ":" + port.ExposedPort
 	service.Name = serviceName
+	service.Nodename = Nodename
+	service.ContainerID = container.ID[:12]
 	if isgroup && !metadataFromPort["name"] {
 		service.Name += "-" + port.ExposedPort
 	}
@@ -336,13 +345,14 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		}
 	}
 
+	var containerid string = "container_id=" + service.ContainerID[:12]
 	if port.PortType == "udp" {
 		service.Tags = combineTags(
-			mapDefault(metadata, "tags", ""), b.config.ForceTags, "udp", hostNameAsTag())
+			mapDefault(metadata, "tags", ""), b.config.ForceTags, "udp", hostNameAsTag(), containerid)
 		service.ID = service.ID + ":udp"
 	} else {
 		service.Tags = combineTags(
-			mapDefault(metadata, "tags", ""), b.config.ForceTags, hostNameAsTag())
+			mapDefault(metadata, "tags", ""), b.config.ForceTags, hostNameAsTag(), containerid)
 	}
 
 	id := mapDefault(metadata, "id", "")

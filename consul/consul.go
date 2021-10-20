@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gliderlabs/registrator/bridge"
+	"github.com/gliderlabs/registrator/influxdb"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-cleanhttp"
 )
@@ -38,8 +39,8 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		tlsConfigDesc := &consulapi.TLSConfig{
 			Address:            uri.Host,
 			CAFile:             os.Getenv("CONSUL_CACERT"),
-			CertFile:           os.Getenv("CONSUL_CLIENT_CERT"),
-			KeyFile:            os.Getenv("CONSUL_CLIENT_KEY"),
+			CertFile:           os.Getenv("CONSUL_TLSCERT"),
+			KeyFile:            os.Getenv("CONSUL_TLSKEY"),
 			InsecureSkipVerify: false,
 		}
 		tlsConfig, err := consulapi.SetupTLSConfig(tlsConfigDesc)
@@ -49,35 +50,38 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		config.Scheme = "https"
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig
-		config.Transport = transport
+		config.HttpClient.Transport = transport
 		config.Address = uri.Host
 	} else if uri.Host != "" {
 		config.Address = uri.Host
 	}
 	client, err := consulapi.NewClient(config)
+	influxClient := influxdb.New()
 	if err != nil {
 		log.Fatal("consul: ", uri.Scheme)
 	}
-	return &ConsulAdapter{client: client}
+	return &ConsulAdapter{client: client, influxclient: influxClient}
 }
 
 type ConsulAdapter struct {
-	client *consulapi.Client
+	client       *consulapi.Client
+	influxclient influxdb.InfluxDBClient
 }
 
 // Ping will try to connect to consul by attempting to retrieve the current leader.
 func (r *ConsulAdapter) Ping() error {
 	status := r.client.Status()
 	leader, err := status.Leader()
+	_ = leader
 	if err != nil {
 		return err
 	}
-	log.Println("consul: current leader ", leader)
 
 	return nil
 }
 
 func (r *ConsulAdapter) Register(service *bridge.Service) error {
+
 	registration := new(consulapi.AgentServiceRegistration)
 	registration.ID = service.ID
 	registration.Name = service.Name
@@ -87,6 +91,35 @@ func (r *ConsulAdapter) Register(service *bridge.Service) error {
 	registration.Check = r.buildCheck(service)
 	registration.Meta = service.Attrs
 	return r.client.Agent().ServiceRegister(registration)
+}
+
+func (r *ConsulAdapter) QueryConsul(service *bridge.Service) error {
+	OShostname, _ := os.Hostname()
+	ServiceHealthCheck, _, _ := r.client.Health().Checks(service.Name, nil)
+	serviceDetails, _, _ := r.client.Health().Service(service.Name, "", false, nil)
+	for _, i := range serviceDetails {
+		for _, j := range ServiceHealthCheck {
+
+			//log.Println("A: ", i.Service, "B: ", j, "OShostname: ", OShostname)
+
+			servicetags := strings.Join(j.ServiceTags, " ")
+			consul_containerid := strings.Split(servicetags, "container_id=")[1][:12]
+			if (i.Service.ID == j.ServiceID) && (OShostname == j.Node) && (service.ContainerID == consul_containerid) {
+				//log.Println("Processing for: ", i.Service.Service, " - ", i.Service.ID, "- ", service.ContainerID)
+				metrics := &influxdb.Metrics{
+					ServiceName:   i.Service.Service,
+					ContainerID:   consul_containerid,
+					HostName:      j.Node,
+					ServicePort:   i.Service.Port,
+					ServiceIP:     i.Service.Address,
+					ServiceStatus: j.Status,
+					ServiceTags:   j.ServiceTags,
+				}
+				r.influxclient.WriteData(metrics)
+			}
+		}
+	}
+	return r.Ping()
 }
 
 func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServiceCheck {
