@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	dockerapi "github.com/fsouza/go-dockerclient"
 )
@@ -19,11 +20,12 @@ var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[
 
 type Bridge struct {
 	sync.Mutex
-	registry       RegistryAdapter
-	docker         *dockerapi.Client
-	services       map[string][]*Service
-	deadContainers map[string]*DeadContainer
-	config         Config
+	registry        RegistryAdapter
+	docker          *dockerapi.Client
+	services        map[string][]*Service
+	deadContainers  map[string]*DeadContainer
+	dyingContainers map[string]time.Time
+	config          Config
 }
 
 func New(docker *dockerapi.Client, adapterUri string, config Config) (*Bridge, error) {
@@ -38,11 +40,12 @@ func New(docker *dockerapi.Client, adapterUri string, config Config) (*Bridge, e
 
 	log.Println("Using", uri.Scheme, "adapter:", uri)
 	return &Bridge{
-		docker:         docker,
-		config:         config,
-		registry:       factory.New(uri),
-		services:       make(map[string][]*Service),
-		deadContainers: make(map[string]*DeadContainer),
+		docker:          docker,
+		config:          config,
+		registry:        factory.New(uri),
+		services:        make(map[string][]*Service),
+		deadContainers:  make(map[string]*DeadContainer),
+		dyingContainers: make(map[string]time.Time),
 	}, nil
 }
 
@@ -181,6 +184,11 @@ func (b *Bridge) Sync(quiet bool) {
 }
 
 func (b *Bridge) add(containerId string, quiet bool) {
+	if _, ok := b.dyingContainers[containerId]; ok {
+		log.Println("container, ", containerId[:12], ", is dying, ignoring")
+		return
+	}
+
 	if d := b.deadContainers[containerId]; d != nil {
 		b.services[containerId] = d.Services
 		delete(b.deadContainers, containerId)
@@ -380,6 +388,7 @@ func (b *Bridge) remove(containerId string, deregister bool) {
 		b.deadContainers[containerId] = &DeadContainer{b.config.RefreshTtl, b.services[containerId]}
 	}
 	delete(b.services, containerId)
+	b.markContainerAsDying(containerId)
 }
 
 // bit set on ExitCode if it represents an exit via a signal
@@ -411,6 +420,18 @@ func (b *Bridge) shouldRemove(containerId string) bool {
 		return true
 	}
 	return false
+}
+
+func (b *Bridge) markContainerAsDying(containerId string) {
+	// cleanup after CleanupDyingTtl
+	for containerId, t := range b.dyingContainers {
+		if time.Since(t) >= time.Millisecond * time.Duration(b.config.CleanupDyingTtl) {
+			delete(b.dyingContainers, containerId)
+		}
+	}
+
+	// mark container as "dying"
+	b.dyingContainers[containerId] = time.Now()
 }
 
 var Hostname string
