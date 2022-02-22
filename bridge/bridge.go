@@ -168,6 +168,7 @@ func (b *Bridge) Sync(quiet bool) {
 			serviceHostname := matches[1]
 			if serviceHostname != Hostname {
 				// ignore because registered on a different host
+                log.Println("different hostname, ignoring: ", serviceHostname, Hostname)
 				continue
 			}
 			serviceContainerName := matches[2]
