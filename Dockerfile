@@ -1,4 +1,4 @@
-FROM golang:1.16.3-alpine3.13 AS builder
+FROM golang:1.23-alpine3.20 AS builder
 WORKDIR /go/src/github.com/simplesurance/registrator/
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build \
