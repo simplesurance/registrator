@@ -1,6 +1,6 @@
 # Registrator
 
-This is a fork of <https://github.com/gliderlabs/registrator>.
+This is a fork of <https://github.com/gliderlabs/registrator>. \
 A Service registry bridge for Docker.
 
 Registrator automatically registers and deregisters services for any Docker
