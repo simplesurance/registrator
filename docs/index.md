@@ -40,7 +40,7 @@ looks like this:
 ## Contributing
 
 Pull requests are welcome! We recommend getting feedback before starting by
-opening a [GitHub issue](https://github.com/gliderlabs/registrator/issues) or
+opening a [GitHub issue](https://github.com/simplesurance/registrator/issues) or
 discussing in [Slack](http://glider-slackin.herokuapp.com/).
 
 Also check out our Developer Guide on [Contributing Backends](dev/backends.md)
@@ -53,7 +53,7 @@ Ongoing support of this project is made possible by [Weave](http://weave.works),
 for inspiration.
 
 For a full list of sponsors, see
-[SPONSORS](https://github.com/gliderlabs/registrator/blob/master/SPONSORS).
+[SPONSORS](https://github.com/simplesurance/registrator/blob/master/SPONSORS).
 
 ## License
 

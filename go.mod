@@ -1,4 +1,4 @@
-module github.com/gliderlabs/registrator
+module github.com/simplesurance/registrator
 
 go 1.23.2
 
