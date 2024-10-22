@@ -130,7 +130,7 @@ func (b *Bridge) Sync(quiet bool) {
 			log.Println("error listing nonExitedContainers, skipping sync", err)
 			return
 		}
-		for listingId, _ := range b.services {
+		for listingId := range b.services {
 			found := false
 			for _, container := range nonExitedContainers {
 				if listingId == container.ID {
@@ -209,8 +209,8 @@ func (b *Bridge) add(containerId string, quiet bool) {
 	ports := make(map[string]ServicePort)
 
 	// Extract configured host port mappings, relevant when using --net=host
-	for port, _ := range container.Config.ExposedPorts {
-		published := []dockerapi.PortBinding{ {"0.0.0.0", port.Port()}, }
+	for port := range container.Config.ExposedPorts {
+		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
 		ports[string(port)] = servicePort(container, port, published)
 	}
 
@@ -317,7 +317,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 				service.IP = containerIp
 			}
 			log.Println("using container IP " + service.IP + " from label '" +
-				b.config.UseIpFromLabel  + "'")
+				b.config.UseIpFromLabel + "'")
 		} else {
 			log.Println("Label '" + b.config.UseIpFromLabel +
 				"' not found in container configuration")
@@ -425,7 +425,7 @@ func (b *Bridge) shouldRemove(containerId string) bool {
 func (b *Bridge) markContainerAsDying(containerId string) {
 	// cleanup after CleanupDyingTtl
 	for containerId, t := range b.dyingContainers {
-		if time.Since(t) >= time.Millisecond * time.Duration(b.config.CleanupDyingTtl) {
+		if time.Since(t) >= time.Millisecond*time.Duration(b.config.CleanupDyingTtl) {
 			delete(b.dyingContainers, containerId)
 		}
 	}

@@ -19,20 +19,22 @@ var Version string
 
 var versionChecker = usage.NewChecker("registrator", Version)
 
-var hostIp = flag.String("ip", "", "IP for ports mapped to the host")
-var internal = flag.Bool("internal", false, "Use internal ports instead of published ones")
-var explicit = flag.Bool("explicit", false, "Only register containers which have SERVICE_NAME label set")
-var useIpFromLabel = flag.String("useIpFromLabel", "", "Use IP which is stored in a label assigned to the container")
-var refreshInterval = flag.Int("ttl-refresh", 0, "Frequency with which service TTLs are refreshed")
-var refreshTtl = flag.Int("ttl", 0, "TTL for services (default is no expiry)")
-var forceTags = flag.String("tags", "", "Append tags for all registered services")
-var resyncInterval = flag.Int("resync", 0, "Frequency with which services are resynchronized")
-var deregister = flag.String("deregister", "always", "Deregister exited services \"always\" or \"on-success\"")
-var deregisterOnStop = flag.Bool("deregister-on-stop", false, "Deregister when container stopped versus once it dies")
-var retryAttempts = flag.Int("retry-attempts", 0, "Max retry attempts to establish a connection with the backend. Use -1 for infinite retries")
-var retryInterval = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
-var cleanup = flag.Bool("cleanup", false, "Remove dangling services")
-var cleanupDyingTtl = flag.Int("ttl-dying-cleanup", 60000, "TTL (in millisecond) for cleaning dying containers cache")
+var (
+	hostIp           = flag.String("ip", "", "IP for ports mapped to the host")
+	internal         = flag.Bool("internal", false, "Use internal ports instead of published ones")
+	explicit         = flag.Bool("explicit", false, "Only register containers which have SERVICE_NAME label set")
+	useIpFromLabel   = flag.String("useIpFromLabel", "", "Use IP which is stored in a label assigned to the container")
+	refreshInterval  = flag.Int("ttl-refresh", 0, "Frequency with which service TTLs are refreshed")
+	refreshTtl       = flag.Int("ttl", 0, "TTL for services (default is no expiry)")
+	forceTags        = flag.String("tags", "", "Append tags for all registered services")
+	resyncInterval   = flag.Int("resync", 0, "Frequency with which services are resynchronized")
+	deregister       = flag.String("deregister", "always", "Deregister exited services \"always\" or \"on-success\"")
+	deregisterOnStop = flag.Bool("deregister-on-stop", false, "Deregister when container stopped versus once it dies")
+	retryAttempts    = flag.Int("retry-attempts", 0, "Max retry attempts to establish a connection with the backend. Use -1 for infinite retries")
+	retryInterval    = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
+	cleanup          = flag.Bool("cleanup", false, "Remove dangling services")
+	cleanupDyingTtl  = flag.Int("ttl-dying-cleanup", 60000, "TTL (in millisecond) for cleaning dying containers cache")
+)
 
 func getopt(name, def string) string {
 	if env := os.Getenv(name); env != "" {

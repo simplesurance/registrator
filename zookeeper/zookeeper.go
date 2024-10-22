@@ -52,7 +52,7 @@ func (r *ZkAdapter) Register(service *bridge.Service) error {
 	publicPortString := strconv.Itoa(service.Port)
 	acl := zk.WorldACL(zk.PermAll)
 	basePath := r.path + "/" + service.Name
-	if (r.path == "/") {
+	if r.path == "/" {
 		basePath = r.path + service.Name
 	}
 	exists, _, err := r.client.Exists(basePath)
@@ -62,7 +62,7 @@ func (r *ZkAdapter) Register(service *bridge.Service) error {
 		if !exists {
 			_, err := r.client.Create(basePath, []byte{}, 0, acl)
 			if err != nil {
-				log.Println("zookeeper: failed to create base service node at path '" + basePath + "': ", err)
+				log.Println("zookeeper: failed to create base service node at path '"+basePath+"': ", err)
 			}
 		} // create base path for the service name if it missing
 		zbody := &ZnodeBody{Name: service.Name, IP: service.IP, PublicPort: service.Port, PrivatePort: privatePort, Tags: service.Tags, Attrs: service.Attrs, ContainerID: service.Origin.ContainerHostname}
@@ -73,7 +73,7 @@ func (r *ZkAdapter) Register(service *bridge.Service) error {
 			path := basePath + "/" + service.IP + ":" + publicPortString
 			_, err = r.client.Create(path, body, 1, acl)
 			if err != nil {
-				log.Println("zookeeper: failed to register service at path '" + path + "': ", err)
+				log.Println("zookeeper: failed to register service at path '"+path+"': ", err)
 			} // create service path error check
 		} // json znode body creation check
 	} // service path exists error check
@@ -91,10 +91,10 @@ func (r *ZkAdapter) Ping() error {
 
 func (r *ZkAdapter) Deregister(service *bridge.Service) error {
 	basePath := r.path + "/" + service.Name
-	if (r.path == "/") {
+	if r.path == "/" {
 		basePath = r.path + service.Name
 	}
-	publicPortString := strconv.Itoa(service.Port)	
+	publicPortString := strconv.Itoa(service.Port)
 	servicePortPath := basePath + "/" + service.IP + ":" + publicPortString
 	// Delete the service-port znode
 	err := r.client.Delete(servicePortPath, -1) // -1 means latest version number
