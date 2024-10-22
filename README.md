@@ -12,16 +12,7 @@ supports pluggable service registries, which currently includes
 ## Using Registrator
 
 The quickest way to see Registrator in action is our
-[Quickstart](docs/user/quickstart.md) tutorial. Otherwise, jump to the [Run
-Reference](docs/user/run.m) in the User Guide. Typically, running Registrator
-looks like this:
-
-    $ docker run -d \
-        --name=registrator \
-        --net=host \
-        --volume=/var/run/docker.sock:/tmp/docker.sock \
-        gliderlabs/registrator:latest \
-          consul://localhost:8500
+[Quickstart](docs/user/quickstart.md) tutorial.
 
 ## CLI Options
 ```
