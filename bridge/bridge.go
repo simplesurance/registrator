@@ -210,7 +210,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	// Extract configured host port mappings, relevant when using --net=host
 	for port := range container.Config.ExposedPorts {
-		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
+		published := []dockerapi.PortBinding{{HostIP: "0.0.0.0", HostPort: port.Port()}}
 		ports[string(port)] = servicePort(container, port, published)
 	}
 
@@ -226,7 +226,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	servicePorts := make(map[string]ServicePort)
 	for key, port := range ports {
-		if b.config.Internal != true && port.HostPort == "" {
+		if !b.config.Internal && port.HostPort == "" {
 			if !quiet {
 				log.Println("ignored:", container.ID[:12], "port", port.ExposedPort, "not published on host")
 			}
@@ -298,7 +298,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	}
 	var p int
 
-	if b.config.Internal == true {
+	if b.config.Internal {
 		service.IP = port.ExposedIP
 		p, _ = strconv.Atoi(port.ExposedPort)
 	} else {

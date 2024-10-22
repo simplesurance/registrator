@@ -27,7 +27,7 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		log.Println("zookeeper: error checking if base path exists:", err)
 	}
 	if !exists {
-		c.Create(uri.Path, []byte{}, 0, zk.WorldACL(zk.PermAll))
+		c.Create(uri.Path, []byte{}, 0, zk.WorldACL(zk.PermAll)) // nolint:errcheck
 	}
 	return &ZkAdapter{client: c, path: uri.Path}
 }

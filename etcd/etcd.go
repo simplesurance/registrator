@@ -1,7 +1,7 @@
 package etcd
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -34,9 +34,9 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 	}
 
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 
-	if match, _ := regexp.Match("0\\.4\\.*", body); match == true {
+	if match, _ := regexp.Match("0\\.4\\.*", body); match {
 		log.Println("etcd: using v0 client")
 		return &EtcdAdapter{client: etcd.NewClient(urls), path: uri.Path}
 	}
