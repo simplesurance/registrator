@@ -34,7 +34,6 @@ var (
 	retryAttempts    = flag.Int("retry-attempts", 0, "Max retry attempts to establish a connection with the backend. Use -1 for infinite retries")
 	retryInterval    = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
 	cleanup          = flag.Bool("cleanup", false, "Remove dangling services")
-	cleanupDyingTtl  = flag.Int("ttl-dying-cleanup", 60000, "TTL (in millisecond) for cleaning dying containers cache")
 )
 
 func assert(err error) {
@@ -110,7 +109,6 @@ func main() {
 		RefreshInterval: *refreshInterval,
 		DeregisterCheck: *deregister,
 		Cleanup:         *cleanup,
-		CleanupDyingTtl: *cleanupDyingTtl,
 	})
 
 	assert(err)
