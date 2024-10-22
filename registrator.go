@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	dockerevents "github.com/docker/docker/api/types/events"
 	dockerapi "github.com/fsouza/go-dockerclient"
 	"github.com/gliderlabs/pkg/usage"
 	"github.com/simplesurance/registrator/bridge"
@@ -174,12 +175,12 @@ func main() {
 
 	// Process Docker events
 	for msg := range events {
-		switch msg.Status {
-		case "start":
+		switch dockerevents.Action(msg.Action) {
+		case dockerevents.ActionStart, dockerevents.ActionUnPause:
 			go b.Add(msg.ID)
-		case "die":
+		case dockerevents.ActionDie:
 			go b.RemoveOnExit(msg.ID)
-		case "kill":
+		case dockerevents.ActionKill:
 			if *deregisterOnStop {
 				go b.RemoveOnExit(msg.ID)
 			}

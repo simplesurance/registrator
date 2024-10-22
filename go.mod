@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/coreos/go-etcd v2.0.0+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/fsouza/go-dockerclient v1.12.0
 	github.com/gliderlabs/pkg v0.0.0-20161206023812-36f28d47ec7a
 	github.com/hashicorp/consul/api v1.29.5
@@ -19,7 +20,6 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/docker/docker v27.3.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
