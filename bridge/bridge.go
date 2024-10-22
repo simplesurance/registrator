@@ -94,18 +94,19 @@ func (b *Bridge) Sync(quiet bool) {
 	b.Lock()
 	defer b.Unlock()
 
-	containers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{})
+	filters := map[string][]string{"status": {"running", "restarting"}}
+	runningContainers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{Filters: filters})
 	if err != nil && quiet {
-		log.Println("error listing containers, skipping sync")
+		log.Println("skipping sync, listing containers failed:", err)
 		return
 	} else if err != nil && !quiet {
 		log.Fatal(err)
 	}
 
-	log.Printf("Syncing services on %d containers", len(containers))
+	log.Printf("Syncing services on %d running containers", len(runningContainers))
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
-	for _, listing := range containers {
+	for _, listing := range runningContainers {
 		services := b.services[listing.ID]
 		if services == nil {
 			b.add(listing.ID, quiet)
@@ -124,15 +125,9 @@ func (b *Bridge) Sync(quiet bool) {
 	if b.config.Cleanup {
 		// Remove services if its corresponding container is not running
 		log.Println("Listing non-exited containers")
-		filters := map[string][]string{"status": {"created", "restarting", "running", "paused"}}
-		nonExitedContainers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{Filters: filters})
-		if err != nil {
-			log.Println("error listing nonExitedContainers, skipping sync", err)
-			return
-		}
 		for listingId := range b.services {
 			found := false
-			for _, container := range nonExitedContainers {
+			for _, container := range runningContainers {
 				if listingId == container.ID {
 					found = true
 					break
@@ -140,7 +135,7 @@ func (b *Bridge) Sync(quiet bool) {
 			}
 			// This is a container that does not exist
 			if !found {
-				log.Printf("stale: Removing service %s because it does not exist", listingId)
+				log.Printf("stale: Removing service %s because it's container is not running ", listingId)
 				go b.RemoveOnExit(listingId)
 			}
 		}
