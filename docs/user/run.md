@@ -16,7 +16,7 @@ and then requires a Registry URI. Here is a typical way to run Registrator:
         --name=registrator \
         --net=host \
         --volume=/var/run/docker.sock:/tmp/docker.sock \
-        gliderlabs/registrator:latest \
+        <DOCKER-IMAGE-LINK-MISSING>
           consul://localhost:8500
 
 ## Docker Options
@@ -78,7 +78,7 @@ The ACL token is passed in through docker in an environment variable called `CON
         --net=host \
         --volume=/var/run/docker.sock:/tmp/docker.sock \
         -e CONSUL_HTTP_TOKEN=<your acl token> \
-        gliderlabs/registrator:latest \
+        <DOCKER-IMAGE-LINK-MISSING>
           consul://localhost:8500
 
 ## Registry URI
