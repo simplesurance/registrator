@@ -1,0 +1,58 @@
+---
+name: ci
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        go: ["1.23"]
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+      - name: build
+        run: "go build ./..."
+
+  test:
+    strategy:
+      matrix:
+        go: ["1.23"]
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+      - name: test
+        run: go test -race ./...
+
+  golangci:
+    strategy:
+      matrix:
+        go: ["1.23"]
+        lint: ["v1.61"]
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: ${{ matrix.lint }}
