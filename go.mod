@@ -3,7 +3,6 @@ module github.com/gliderlabs/registrator
 go 1.23.2
 
 require (
-	github.com/cenkalti/backoff v2.0.0+incompatible
 	github.com/coreos/go-etcd v2.0.0+incompatible
 	github.com/fsouza/go-dockerclient v1.2.0
 	github.com/gliderlabs/pkg v0.0.0-20161206023812-36f28d47ec7a

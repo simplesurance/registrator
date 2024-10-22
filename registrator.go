@@ -36,13 +36,6 @@ var (
 	cleanupDyingTtl  = flag.Int("ttl-dying-cleanup", 60000, "TTL (in millisecond) for cleaning dying containers cache")
 )
 
-func getopt(name, def string) string {
-	if env := os.Getenv(name); env != "" {
-		return env
-	}
-	return def
-}
-
 func assert(err error) {
 	if err != nil {
 		log.Fatal(err)
