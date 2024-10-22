@@ -133,7 +133,7 @@ func main() {
 	}
 
 	// Start event listener before listing containers to avoid missing anything
-	events := make(chan *dockerapi.APIEvents)
+	events := make(chan *dockerapi.APIEvents, 128)
 	assert(docker.AddEventListener(events))
 	log.Println("Listening for Docker events ...")
 
