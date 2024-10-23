@@ -2,5 +2,6 @@
 build
 release
 vendor
+registrator
 
 dist/

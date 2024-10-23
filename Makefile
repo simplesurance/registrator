@@ -1,17 +1,16 @@
-NAME=registrator
-VERSION=$(shell cat VERSION)
-DEV_RUN_OPTS ?= consul:
+default: all
 
-dev:
-	docker build -f Dockerfile.dev -t $(NAME):dev .
-	docker run --rm \
-		-v /var/run/docker.sock:/tmp/docker.sock \
-		$(NAME):dev /bin/registrator $(DEV_RUN_OPTS)
+.PHONY: registrator
+registrator:
+	CGO_ENABLED=0 go build -trimpath -o $@  *.go
 
-build:
-	mkdir -p build
-	docker build -t $(NAME):$(VERSION) .
-	docker save $(NAME):$(VERSION) | gzip -9 > build/$(NAME)_$(VERSION).tgz
+.PHONY: check
+check:
+	golangci-lint run
 
+.PHONY: test
+test:
+	go test -race ./...
 
-.PHONY: build dev
+.PHONY: all
+all: registrator check test
