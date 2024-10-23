@@ -2,3 +2,5 @@
 build
 release
 vendor
+
+dist/
