@@ -1,4 +1,3 @@
-//go:generate go-extpoints . AdapterFactory
 package bridge
 
 import (
