@@ -33,7 +33,7 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		log.Fatal("etcd: error retrieving version", err)
 	}
 
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint: errcheck
 	body, _ := io.ReadAll(res.Body)
 
 	if match, _ := regexp.Match("0\\.4\\.*", body); match {
