@@ -1,0 +1,9 @@
+# https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically
+version: 2
+updates:
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 10
+    rebase-strategy: disabled
+    schedule:
+      interval: weekly
+    labels: []
