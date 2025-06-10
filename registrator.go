@@ -86,9 +86,9 @@ func main() {
 	dockerHost := os.Getenv("DOCKER_HOST")
 	if dockerHost == "" {
 		if runtime.GOOS != "windows" {
-			os.Setenv("DOCKER_HOST", "unix:///tmp/docker.sock")
+			os.Setenv("DOCKER_HOST", "unix:///tmp/docker.sock") //nolint: errcheck
 		} else {
-			os.Setenv("DOCKER_HOST", "npipe:////./pipe/docker_engine")
+			os.Setenv("DOCKER_HOST", "npipe:////./pipe/docker_engine") //nolint: errcheck
 		}
 	}
 

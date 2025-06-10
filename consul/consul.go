@@ -23,8 +23,8 @@ func init() {
 }
 
 func (r *ConsulAdapter) interpolateService(script string, service *bridge.Service) string {
-	withIp := strings.Replace(script, "$SERVICE_IP", service.IP, -1)
-	withPort := strings.Replace(withIp, "$SERVICE_PORT", strconv.Itoa(service.Port), -1)
+	withIp := strings.ReplaceAll(script, "$SERVICE_IP", service.IP)
+	withPort := strings.ReplaceAll(withIp, "$SERVICE_PORT", strconv.Itoa(service.Port))
 	return withPort
 }
 
