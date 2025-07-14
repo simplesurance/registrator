@@ -17,13 +17,13 @@
      variable:
 
        ```sh
-       export GPG_PASSWORD="$(vault read -field=master-priv-key-password secret/gpg-key-platform)"
+       export GPG_PASSWORD="$(vault kv get -field=master-priv-key-password covert/infrastructure/pgp/release@simplesurance.de)"
        ```
 
    - import the signing key:
 
        ```sh
-       vault read -field=subkey-signing-priv-key  secret/gpg-key-platform | \
+       vault kv get -field=subkey-signing-priv-key covert/infrastructure/pgp/release@simplesurance.de | \
            gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSWORD" --import
        ```
 
