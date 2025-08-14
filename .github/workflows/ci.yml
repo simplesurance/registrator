@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         go: ["1.25"]
-        lint: ["v2.3"]
+        lint: ["v2.4"]
     name: lint
     runs-on: ubuntu-latest
     steps:
