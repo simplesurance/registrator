@@ -24,7 +24,7 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats: ['tar.gz']
     name_template: "{{ .ProjectName }}-{{ .Os }}_{{ .Arch }}-{{ .Version }}"
     wrap_in_directory: false
     files:

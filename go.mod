@@ -1,6 +1,6 @@
 module github.com/simplesurance/registrator
 
-go 1.25.0
+go 1.25.2
 
 require (
 	github.com/coreos/go-etcd v2.0.0+incompatible
